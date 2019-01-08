@@ -1,4 +1,6 @@
+import numpy as np
 import zmq
+from PIL import Image
 from flask import Flask, render_template, request, send_file
 from flask_uploads import UploadSet, configure_uploads, IMAGES
 
@@ -24,9 +26,17 @@ def upload():
 
         if message != b'ok':
             return 'Error'
+
+        list_im   = ['processed/' + filename, 'static/img/' + filename]
+        imgs      = [Image.open(i) for i in list_im]
+        min_shape = sorted([(np.sum(i.size), i.size ) for i in imgs])[0][1]
+        imgs_comb = np.hstack((np.asarray(i.resize(min_shape)) for i in imgs))
+        imgs_comb = Image.fromarray(imgs_comb)
+        imgs_comb.save('processed/' + filename)
+
         return send_file('processed/' + filename)
 
     return render_template('upload.html')
 
 if __name__ == '__main__':
-    app.run(debug = False)
+    app.run(debug = True)

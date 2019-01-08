@@ -38,10 +38,10 @@ int main(int argc, char **argv)
     	cuda_set_device(gpu_index);
 #endif
 
-  	float thresh = find_float_arg(argc, argv, "-thresh", .5);
+  	float thresh = find_float_arg(argc, argv, "-thresh", 0.1);
   	float hier_thresh = .5;
   	char *cfgfile = "include/yolo-obj.cfg";
-  	char *weightfile = "include/yolo-obj_2000.weights";
+  	char *weightfile = "include/yolo-obj_8000.weights";
 
     network *net = load_network(cfgfile, weightfile, 0);
     set_batch_network(net, 1);
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 
     while (true)
     {
-        char filename [STRSIZE] = "static/img/";
+        char filename [STRSIZE] = "data/";
         char processed[STRSIZE] = "processed/";
 
         //  wait for next request from client
@@ -62,6 +62,8 @@ int main(int argc, char **argv)
         socket.recv(&request);
 
         strcat(filename, FILE);
+
+        cout << "filename: " << filename << endl;
 
         // check if file exists
         struct stat buffer;
@@ -115,21 +117,26 @@ int main(int argc, char **argv)
         for (int i = 0; i < img.rows; i++)
             for (int j = 0; j < img.cols; j++)
             {
-                // verify if pixel is part of a detected obj
                 int k;
+                bool plant = false;
 
+                // verify if pixel is part of a detected obj and color it
                 for (k = 0; k < nboxes; k++)
                     if (detected_objs[k].top  <= i and i <= detected_objs[k].bot and
                         detected_objs[k].left <= j and j <= detected_objs[k].right)
-                        break;
-
-                if (k < nboxes)
-                    break;
+                        {
+                            auto *pixel = &img.at<Vec3b>(i, j);
+                            PIXEL[RED]   = 0;
+                            PIXEL[GREEN] = min(PIXEL[GREEN] + 30, 255);
+                            PIXEL[BLUE]  = 0;
+                            plant = true;
+                            break;
+                        }
 
                 // make pixel red if it is green
                 auto *pixel = &img.at<Vec3b>(i, j);
                 if (PIXEL[GREEN] > PIXEL[RED] and
-                    PIXEL[GREEN] > PIXEL[BLUE])
+                    PIXEL[GREEN] > PIXEL[BLUE] and not plant)
                 {
                     PIXEL[RED]   = min(PIXEL[RED] + 30, 255);
                     PIXEL[GREEN] = 0;
